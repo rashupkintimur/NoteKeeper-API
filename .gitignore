@@ -1,0 +1,9 @@
+node_modules/
+
+# Editors files and directories
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+
+# DB
+notekeeper.db
