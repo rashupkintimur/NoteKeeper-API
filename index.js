@@ -48,7 +48,7 @@ app.post("/api/notes", async (req, res) => {
       INSERT INTO notes (title, text) VALUES (?, ?)
     `,
         [title, text],
-        (err) => {
+        function (err) {
           if (err) reject(err);
 
           resolve(this.lastID);
