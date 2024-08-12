@@ -6,6 +6,12 @@ const app = express();
 
 app.use(bodyParser.json());
 
+// errors messages
+const EMPTY_PARAMS = "You hand over empty parameters";
+const PASS_PARAMS = "You didn't pass all parameters";
+const NOT_FOUND = "Not Found";
+
+// get all notes
 app.get("/api/notes", async (req, res) => {
   try {
     const notes = await new Promise((resolve, reject) => {
@@ -22,11 +28,21 @@ app.get("/api/notes", async (req, res) => {
   }
 });
 
+// create new note
 app.post("/api/notes", async (req, res) => {
   const { title, text } = req.body;
 
+  if (!title && !text) {
+    return res.status(400).json({ error: PASS_PARAMS });
+  }
+
+  if (!title.length || !text.length) {
+    return res.status(400).json({ error: EMPTY_PARAMS });
+  }
+
   try {
-    const result = await new Promise((resolve, reject) => {
+    // if create new note was success, we get note id on which the operation was performed
+    const id = await new Promise((resolve, reject) => {
       db.run(
         `
       INSERT INTO notes (title, text) VALUES (?, ?)
@@ -35,17 +51,18 @@ app.post("/api/notes", async (req, res) => {
         (err) => {
           if (err) reject(err);
 
-          resolve("success");
+          resolve(this.lastID);
         }
       );
     });
 
-    res.status(200).json({ message: result });
+    res.status(201).json({ id: id });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
+// get specific note
 app.get("/api/notes/:id", async (req, res) => {
   const id = req.params.id;
 
@@ -64,22 +81,32 @@ app.get("/api/notes/:id", async (req, res) => {
       );
     });
 
-    res.status(200).json(note);
+    if (!note) {
+      res.status(404).json({ error: NOT_FOUND });
+    } else {
+      res.status(200).json(note);
+    }
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
+// edit note
 app.put("/api/notes/:id", async (req, res) => {
   const { title, text } = req.body;
   const id = req.params.id;
 
   if (!title && !text) {
-    return res.status(400).json({ error: "you did not pass any parameters" });
+    return res.status(400).json({ error: PASS_PARAMS });
+  }
+
+  if (!title.length || !text.length) {
+    return res.status(400).json({ error: EMPTY_PARAMS });
   }
 
   try {
-    const result = await new Promise((resolve, reject) => {
+    // if edit note was success, we get note id on which the operation was performed
+    const noteId = await new Promise((resolve, reject) => {
       db.run(
         `
         UPDATE notes SET title = ?, text = ? WHERE id = ?
@@ -88,22 +115,24 @@ app.put("/api/notes/:id", async (req, res) => {
         (err) => {
           if (err) reject(err);
 
-          resolve("success");
+          resolve(id);
         }
       );
     });
 
-    res.status(200).json({ message: result });
+    res.status(200).json({ id: noteId });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
+// delete note
 app.delete("/api/notes/:id", async (req, res) => {
   const id = req.params.id;
 
   try {
-    const result = await new Promise((resolve, reject) => {
+    // if update note was success, we get note id on which the operation was performed
+    const noteId = await new Promise((resolve, reject) => {
       db.run(
         `
         DELETE FROM notes WHERE id = ?
@@ -112,12 +141,12 @@ app.delete("/api/notes/:id", async (req, res) => {
         (err) => {
           if (err) reject(err);
 
-          resolve("success");
+          resolve(id);
         }
       );
     });
 
-    res.status(200).json({ message: "success" });
+    res.status(200).json({ id: noteId });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
